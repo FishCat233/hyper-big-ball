@@ -1,0 +1,67 @@
+{
+  "fruits": [
+    {
+      "level": 1,
+      "name": "cherry",
+      "emoji": "🍒",
+      "radius": 15,
+      "color": "#FF6B6B",
+      "score": 10
+    },
+    {
+      "level": 2,
+      "name": "orange",
+      "emoji": "🍊",
+      "radius": 22,
+      "color": "#FFA502",
+      "score": 20
+    },
+    {
+      "level": 3,
+      "name": "peach",
+      "emoji": "🍑",
+      "radius": 30,
+      "color": "#FFB8C6",
+      "score": 40
+    },
+    {
+      "level": 4,
+      "name": "apple",
+      "emoji": "🍎",
+      "radius": 40,
+      "color": "#FF4757",
+      "score": 80
+    },
+    {
+      "level": 5,
+      "name": "melon",
+      "emoji": "🍈",
+      "radius": 52,
+      "color": "#7BED9F",
+      "score": 160
+    },
+    {
+      "level": 6,
+      "name": "pineapple",
+      "emoji": "🍍",
+      "radius": 65,
+      "color": "#FFE135",
+      "score": 320
+    },
+    {
+      "level": 7,
+      "name": "watermelon",
+      "emoji": "🍉",
+      "radius": 80,
+      "color": "#2ED573",
+      "score": 640
+    }
+  ],
+  "game": {
+    "canvasWidth": 400,
+    "canvasHeight": 600,
+    "wallThickness": 10,
+    "dropHeight": 50,
+    "previewFruitLevel": 1
+  }
+}
