@@ -7,8 +7,9 @@ import {
   type FruitsConfig,
   type FruitType,
   type FruitVariant,
+  type ImageVariant,
 } from './fruit';
-import { PixiRenderer, type RenderableFruit } from './renderer';
+import { SpecRenderer, type RenderableFruit } from './spec-renderer';
 
 const { Engine, Runner, Bodies, Composite, Events, Vector } = Matter;
 
@@ -17,6 +18,7 @@ type FruitBody = Matter.Body & {
   isMerged?: boolean;
   stableTime?: number;
   variant?: FruitVariant;
+  imageVariant?: ImageVariant;
   breathPhase?: number;
   gravityScale?: number;
 };
@@ -27,12 +29,17 @@ interface ComboInfo {
   mergePositions: Matter.Vector[];
 }
 
-export class Game {
+interface QQConfig {
+  qqNumbers: string[];
+}
+
+export class SpecGame {
   private engine: Matter.Engine;
   private runner: Matter.Runner;
-  private renderer: PixiRenderer;
+  private renderer: SpecRenderer;
   private canvas: HTMLCanvasElement;
   private scoreElement: HTMLElement;
+  private timerElement: HTMLElement;
   private nextFruitElement: HTMLElement;
   private gameOverElement: HTMLElement;
   private finalScoreElement: HTMLElement;
@@ -48,8 +55,19 @@ export class Game {
   private fruits: FruitType[] = [];
   private currentVariant: FruitVariant = null;
   private nextVariant: FruitVariant = null;
+  private currentImageVariant: ImageVariant = null;
+  private nextImageVariant: ImageVariant = null;
   private animationFrameId: number = 0;
   private comboInfo: ComboInfo = { count: 0, lastMergeTime: 0, mergePositions: [] };
+  private qqConfig: QQConfig | null = null;
+  private gameStartTime: number = 0;
+  private timerInterval: number = 0;
+
+  // 演示模式特殊标记
+  private hasSpawnedMaxElasticity: boolean = false;
+  private hasSpawnedRainbow: boolean = false;
+  private imageVariantCount: number = 0;
+  private readonly MAX_IMAGE_VARIANTS = 5;
 
   private readonly GAME_WIDTH = 400;
   private readonly GAME_HEIGHT = 600;
@@ -62,6 +80,7 @@ export class Game {
   constructor() {
     this.canvas = document.getElementById('game-canvas') as HTMLCanvasElement;
     this.scoreElement = document.getElementById('score') as HTMLElement;
+    this.timerElement = document.getElementById('timer') as HTMLElement;
     this.nextFruitElement = document.getElementById('next-fruit') as HTMLElement;
     this.gameOverElement = document.getElementById('game-over') as HTMLElement;
     this.finalScoreElement = document.getElementById('final-score') as HTMLElement;
@@ -72,7 +91,7 @@ export class Game {
 
     this.engine = Engine.create();
     this.runner = Runner.create();
-    this.renderer = new PixiRenderer(this.canvas, this.GAME_WIDTH, this.GAME_HEIGHT);
+    this.renderer = new SpecRenderer(this.canvas, this.GAME_WIDTH, this.GAME_HEIGHT);
   }
 
   public async init(): Promise<void> {
@@ -84,13 +103,29 @@ export class Game {
 
     this.engine.gravity.y = settings.gravity;
 
+    // 加载 QQ 配置
+    await this.loadQQConfig();
+
     this.setupWorld();
     this.setupEvents();
     this.generateNextFruit();
     this.currentFruitLevel = this.nextFruitLevel;
     this.currentVariant = this.nextVariant;
+    this.currentImageVariant = this.nextImageVariant;
     this.generateNextFruit();
     this.updateNextFruitPreview();
+  }
+
+  private async loadQQConfig(): Promise<void> {
+    try {
+      const response = await fetch('./qq-config.json');
+      if (response.ok) {
+        this.qqConfig = await response.json();
+      }
+    } catch {
+      // 配置文件不存在，使用空数组
+      this.qqConfig = { qqNumbers: [] };
+    }
   }
 
   private setupWorld(): void {
@@ -152,6 +187,7 @@ export class Game {
     const fruit = this.fruits[this.currentFruitLevel];
     const settings = getGameSettings(this.config);
     const variant = this.currentVariant;
+    const imageVariant = this.currentImageVariant;
 
     const restitution = Fruit.getEffectiveRestitution(0.3, variant);
     const density = Fruit.getEffectiveDensity(0.001, variant);
@@ -164,18 +200,18 @@ export class Game {
       label: fruit.emoji,
     }) as FruitBody;
 
-    // 应用重力倍率
     body.gravityScale = gravity / this.engine.gravity.y;
-
     body.fruitLevel = this.currentFruitLevel;
     body.isMerged = false;
     body.variant = variant;
+    body.imageVariant = imageVariant;
     body.breathPhase = 0;
 
     Composite.add(this.engine.world, body);
 
     this.currentFruitLevel = this.nextFruitLevel;
     this.currentVariant = this.nextVariant;
+    this.currentImageVariant = this.nextImageVariant;
     this.generateNextFruit();
     this.updateNextFruitPreview();
 
@@ -187,17 +223,87 @@ export class Game {
   private generateNextFruit(): void {
     if (!this.config) return;
     this.nextFruitLevel = Fruit.getRandomFruitLevel(this.config);
-    this.nextVariant = Fruit.generateVariant(this.config);
+
+    // 演示模式：提升弹性水果和彩虹水果概率
+    this.nextVariant = this.generateSpecVariant();
+
+    // 演示模式：提升图像变体概率
+    this.nextImageVariant = this.generateImageVariant();
+  }
+
+  private generateSpecVariant(): FruitVariant {
+    if (!this.config) return null;
+
+    const settings = this.config.variantSettings;
+
+    // 检查是否还需要强制生成特殊变体
+    const needMaxElasticity = !this.hasSpawnedMaxElasticity;
+    const needRainbow = !this.hasSpawnedRainbow;
+
+    if (needMaxElasticity || needRainbow) {
+      // 70% 概率生成特殊变体
+      if (Math.random() < 0.7) {
+        if (needMaxElasticity && Math.random() < 0.5) {
+          this.hasSpawnedMaxElasticity = true;
+          // 生成最高级弹性水果
+          const highElasticity = settings.elasticity.levels.find((l) => l.name === 'high');
+          if (highElasticity) {
+            return { type: 'elasticity', level: highElasticity };
+          }
+        } else if (needRainbow) {
+          this.hasSpawnedRainbow = true;
+          return { type: 'color', color: '#FF1493', variantType: 'rainbow' };
+        }
+      }
+    }
+
+    // 普通变体生成（提升概率）
+    if (Math.random() > settings.triggerProbability * 1.3) {
+      return null;
+    }
+
+    const variantTypes = ['weight', 'elasticity', 'color'] as const;
+    const selectedType = variantTypes[Math.floor(Math.random() * variantTypes.length)];
+
+    switch (selectedType) {
+      case 'weight':
+        return Fruit.generateWeightVariant(settings);
+      case 'elasticity':
+        return Fruit.generateElasticityVariant(settings);
+      case 'color':
+        return Fruit.generateColorVariant(settings);
+      default:
+        return null;
+    }
+  }
+
+  private generateImageVariant(): ImageVariant {
+    // 演示模式：必出5个图像变体
+    if (this.imageVariantCount < this.MAX_IMAGE_VARIANTS) {
+      this.imageVariantCount++;
+      return Fruit.generateImageVariant(this.qqConfig?.qqNumbers || []);
+    }
+    return null;
   }
 
   private updateNextFruitPreview(): void {
     const fruit = this.fruits[this.nextFruitLevel];
     const variant = this.nextVariant;
+    const imageVariant = this.nextImageVariant;
     const color = Fruit.getEffectiveColor(fruit, variant);
 
-    this.nextFruitElement.textContent = fruit.emoji;
-    this.nextFruitElement.style.fontSize = `${fruit.radius * 1.5}px`;
-    this.nextFruitElement.style.backgroundColor = color;
+    // 如果有图像变体，显示头像
+    if (imageVariant) {
+      this.nextFruitElement.textContent = '';
+      this.nextFruitElement.style.backgroundImage = `url(${imageVariant.avatarUrl})`;
+      this.nextFruitElement.style.backgroundSize = 'cover';
+      this.nextFruitElement.style.backgroundColor = color;
+    } else {
+      this.nextFruitElement.textContent = fruit.emoji;
+      this.nextFruitElement.style.backgroundImage = '';
+      this.nextFruitElement.style.fontSize = `${fruit.radius * 1.5}px`;
+      this.nextFruitElement.style.backgroundColor = color;
+    }
 
     // 重置边框样式
     this.nextFruitElement.style.border = 'none';
@@ -209,21 +315,17 @@ export class Game {
         this.nextFruitElement.style.border = `${weightVariant.level.outlineWidth}px solid ${weightVariant.level.outlineColor}`;
       }
     } else if (variant?.type === 'elasticity') {
-      // 金色边框 + 金色阴影模拟光环效果
       this.nextFruitElement.style.border = '3px solid #FFD700';
       this.nextFruitElement.style.boxShadow = '0 0 8px 2px rgba(255, 215, 0, 0.5)';
     } else if (variant?.type === 'color') {
       if (variant.variantType === 'rainbow') {
-        // 彩虹渐变边框
         this.nextFruitElement.style.border = '4px solid transparent';
         this.nextFruitElement.style.backgroundImage = `linear-gradient(${color}, ${color}), linear-gradient(45deg, #FF1493, #FFD700, #00CED1, #FF1493)`;
         this.nextFruitElement.style.backgroundOrigin = 'border-box';
         this.nextFruitElement.style.backgroundClip = 'content-box, border-box';
       } else if (variant.variantType === 'black') {
-        // 黑色变体：深灰色边框
         this.nextFruitElement.style.border = '4px solid #333333';
       } else if (variant.variantType === 'white') {
-        // 白色变体：浅灰色边框
         this.nextFruitElement.style.border = '4px solid #cccccc';
       }
     }
@@ -265,7 +367,8 @@ export class Game {
     Composite.remove(this.engine.world, [bodyA, bodyB]);
 
     // 合成后的水果随机产生变体
-    const newVariant = Fruit.generateVariant(this.config);
+    const newVariant = this.generateSpecVariant();
+    const newImageVariant = this.generateImageVariant();
     const restitution = Fruit.getEffectiveRestitution(0.3, newVariant);
     const density = Fruit.getEffectiveDensity(0.001, newVariant);
     const gravity = Fruit.getEffectiveGravity(this.engine.gravity.y, newVariant);
@@ -280,9 +383,8 @@ export class Game {
     newBody.fruitLevel = newLevel;
     newBody.isMerged = false;
     newBody.variant = newVariant;
+    newBody.imageVariant = newImageVariant;
     newBody.breathPhase = 0;
-
-    // 应用重力倍率
     newBody.gravityScale = gravity / this.engine.gravity.y;
 
     Composite.add(this.engine.world, newBody);
@@ -290,7 +392,7 @@ export class Game {
     this.score += newFruit.score;
     this.updateScore();
 
-    // 播放合成特效（小型烟花在合成位置）
+    // 播放合成特效
     this.renderer.triggerMergeFirework(newPos.x, newPos.y);
 
     // 更新连击信息
@@ -316,12 +418,20 @@ export class Game {
   }
 
   private triggerComboEffect(): void {
-    // 播放连击特效（大型烟花在页面周围随机位置）
     this.renderer.triggerComboFireworks(this.comboInfo.count);
   }
 
   private updateScore(): void {
     this.scoreElement.textContent = this.score.toString();
+  }
+
+  private updateTimer(): void {
+    const elapsed = Math.floor((Date.now() - this.gameStartTime) / 1000);
+    const minutes = Math.floor(elapsed / 60)
+      .toString()
+      .padStart(2, '0');
+    const seconds = (elapsed % 60).toString().padStart(2, '0');
+    this.timerElement.textContent = `${minutes}:${seconds}`;
   }
 
   private render(): void {
@@ -337,6 +447,7 @@ export class Game {
           body,
           fruitType: this.fruits[fruitBody.fruitLevel],
           variant: fruitBody.variant || null,
+          imageVariant: fruitBody.imageVariant || null,
           breathPhase: fruitBody.breathPhase || 0,
         });
       }
@@ -351,6 +462,7 @@ export class Game {
         this.FRUIT_SPAWN_Y,
         currentFruit,
         this.currentVariant,
+        this.currentImageVariant,
         true,
         this.GAME_HEIGHT
       );
@@ -400,6 +512,7 @@ export class Game {
     this.finalScoreElement.textContent = this.score.toString();
     this.gameOverElement.classList.remove('hidden');
     Runner.stop(this.runner);
+    clearInterval(this.timerInterval);
   }
 
   private restart(): void {
@@ -410,6 +523,11 @@ export class Game {
     this.canDrop = true;
     this.currentVariant = null;
     this.nextVariant = null;
+    this.currentImageVariant = null;
+    this.nextImageVariant = null;
+    this.hasSpawnedMaxElasticity = false;
+    this.hasSpawnedRainbow = false;
+    this.imageVariantCount = 0;
     this.updateScore();
 
     Composite.clear(this.engine.world, false);
@@ -419,11 +537,17 @@ export class Game {
     this.generateNextFruit();
     this.currentFruitLevel = this.nextFruitLevel;
     this.currentVariant = this.nextVariant;
+    this.currentImageVariant = this.nextImageVariant;
     this.generateNextFruit();
     this.updateNextFruitPreview();
 
     this.gameOverElement.classList.add('hidden');
     Runner.run(this.runner, this.engine);
+
+    // 重置计时器
+    this.gameStartTime = Date.now();
+    clearInterval(this.timerInterval);
+    this.timerInterval = window.setInterval(() => this.updateTimer(), 1000);
   }
 
   public start(): void {
@@ -431,16 +555,22 @@ export class Game {
 
     this.currentFruitLevel = this.nextFruitLevel;
     this.currentVariant = this.nextVariant;
+    this.currentImageVariant = this.nextImageVariant;
     this.generateNextFruit();
     this.updateNextFruitPreview();
 
     Runner.run(this.runner, this.engine);
     this.gameLoop();
+
+    // 启动计时器
+    this.gameStartTime = Date.now();
+    this.timerInterval = window.setInterval(() => this.updateTimer(), 1000);
   }
 
   public destroy(): void {
     cancelAnimationFrame(this.animationFrameId);
     Runner.stop(this.runner);
+    clearInterval(this.timerInterval);
     this.renderer.destroy();
   }
 }

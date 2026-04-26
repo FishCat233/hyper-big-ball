@@ -44,7 +44,15 @@ export interface ColorVariant {
   variantType: 'black' | 'white' | 'rainbow';
 }
 
+export interface ImageVariant {
+  type: 'image';
+  qqNumber: string;
+  avatarUrl: string;
+}
+
 export type FruitVariant = WeightVariant | ElasticityVariant | ColorVariant | null;
+
+export type { ImageVariant };
 
 export interface VariantSettings {
   triggerProbability: number;
@@ -214,5 +222,17 @@ export class Fruit {
       return variant.level.restitution;
     }
     return baseRestitution;
+  }
+
+  static generateImageVariant(qqNumbers: string[]): ImageVariant | null {
+    if (qqNumbers.length === 0) {
+      return null;
+    }
+    const qqNumber = qqNumbers[Math.floor(Math.random() * qqNumbers.length)];
+    return {
+      type: 'image',
+      qqNumber,
+      avatarUrl: `http://q.qlogo.cn/g?b=qq&nk=${qqNumber}&s=640`,
+    };
   }
 }
