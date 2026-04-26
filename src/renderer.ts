@@ -2,6 +2,22 @@ import { Application, Graphics, Container, Text } from 'pixi.js';
 import Matter from 'matter-js';
 import type { FruitType, FruitVariant, ElasticityVariant } from './fruit';
 
+interface FireworkParticle {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  life: number;
+  maxLife: number;
+  color: number;
+  size: number;
+}
+
+interface Firework {
+  particles: FireworkParticle[];
+  active: boolean;
+}
+
 export interface RenderableFruit {
   body: Matter.Body;
   fruitType: FruitType;
@@ -24,11 +40,18 @@ export class PixiRenderer {
   private app!: Application;
   private fruitContainer!: Container;
   private previewContainer!: Container;
+  private effectContainer!: Container;
   private fruitGraphics: Map<number, Graphics>;
   private fruitTexts: Map<number, Text>;
   private canvas: HTMLCanvasElement;
   private width: number;
   private height: number;
+  private fireworks: Firework[] = [];
+  private effectGraphics: Graphics | null = null;
+
+  private readonly FIREWORK_COLORS = [
+    0xff1493, 0xffd700, 0x00ced1, 0xff4757, 0x7bed9f, 0xffa502, 0x2ed573,
+  ];
 
   constructor(canvas: HTMLCanvasElement, width: number, height: number) {
     this.canvas = canvas;
@@ -52,8 +75,13 @@ export class PixiRenderer {
 
     this.fruitContainer = new Container();
     this.previewContainer = new Container();
+    this.effectContainer = new Container();
     this.app.stage.addChild(this.fruitContainer);
     this.app.stage.addChild(this.previewContainer);
+    this.app.stage.addChild(this.effectContainer);
+
+    this.effectGraphics = new Graphics();
+    this.effectContainer.addChild(this.effectGraphics);
   }
 
   public getApp(): Application {
@@ -420,6 +448,83 @@ export class PixiRenderer {
     const g = Math.max(0, Math.min(255, parseInt(hex.slice(2, 4), 16) + amount));
     const b = Math.max(0, Math.min(255, parseInt(hex.slice(4, 6), 16) + amount));
     return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+  }
+
+  public triggerFireworks(x: number, y: number, comboCount: number): void {
+    const particleCount = Math.min(20 + comboCount * 10, 80);
+    const burstCount = Math.min(1 + Math.floor(comboCount / 3), 3);
+
+    for (let b = 0; b < burstCount; b++) {
+      const offsetX = (Math.random() - 0.5) * 100;
+      const offsetY = (Math.random() - 0.5) * 50;
+      this.createFireworkBurst(x + offsetX, y + offsetY, particleCount);
+    }
+  }
+
+  private createFireworkBurst(x: number, y: number, particleCount: number): void {
+    const particles: FireworkParticle[] = [];
+    const baseColor = this.FIREWORK_COLORS[Math.floor(Math.random() * this.FIREWORK_COLORS.length)];
+
+    for (let i = 0; i < particleCount; i++) {
+      const angle = (Math.PI * 2 * i) / particleCount + (Math.random() - 0.5) * 0.5;
+      const speed = 3 + Math.random() * 4;
+      const size = 2 + Math.random() * 3;
+
+      particles.push({
+        x: x,
+        y: y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        life: 1.0,
+        maxLife: 1.0,
+        color: baseColor,
+        size: size,
+      });
+    }
+
+    this.fireworks.push({
+      particles,
+      active: true,
+    });
+  }
+
+  public updateFireworks(): void {
+    if (!this.effectGraphics || this.fireworks.length === 0) return;
+
+    this.effectGraphics.clear();
+
+    this.fireworks = this.fireworks.filter((firework) => {
+      firework.particles = firework.particles.filter((particle) => {
+        particle.x += particle.vx;
+        particle.y += particle.vy;
+        particle.vy += 0.15;
+        particle.vx *= 0.98;
+        particle.vy *= 0.98;
+        particle.life -= 0.02;
+
+        if (particle.life > 0) {
+          const alpha = particle.life;
+          const currentSize = particle.size * particle.life;
+
+          this.effectGraphics!.circle(particle.x, particle.y, currentSize);
+          this.effectGraphics!.fill({
+            color: particle.color,
+            alpha: alpha,
+          });
+
+          this.effectGraphics!.circle(particle.x, particle.y, currentSize * 0.5);
+          this.effectGraphics!.fill({
+            color: 0xffffff,
+            alpha: alpha * 0.5,
+          });
+
+          return true;
+        }
+        return false;
+      });
+
+      return firework.particles.length > 0;
+    });
   }
 
   public destroy(): void {

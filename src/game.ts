@@ -43,12 +43,15 @@ export class Game {
   private currentVariant: FruitVariant = null;
   private nextVariant: FruitVariant = null;
   private animationFrameId: number = 0;
+  private comboInfo: ComboInfo = { count: 0, lastMergeTime: 0, mergePositions: [] };
 
   private readonly GAME_WIDTH = 400;
   private readonly GAME_HEIGHT = 600;
   private readonly WALL_THICKNESS = 20;
   private readonly TOP_MARGIN = 100;
   private readonly FRUIT_SPAWN_Y = 80;
+  private readonly COMBO_WINDOW = 1000;
+  private readonly COMBO_THRESHOLD = 2;
 
   constructor() {
     this.canvas = document.getElementById('game-canvas') as HTMLCanvasElement;
@@ -280,6 +283,38 @@ export class Game {
 
     this.score += newFruit.score;
     this.updateScore();
+
+    // 更新连击信息
+    this.updateCombo(newPos);
+  }
+
+  private updateCombo(mergePosition: Matter.Vector): void {
+    const now = Date.now();
+
+    if (now - this.comboInfo.lastMergeTime > this.COMBO_WINDOW) {
+      this.comboInfo.count = 1;
+      this.comboInfo.mergePositions = [{ x: mergePosition.x, y: mergePosition.y }];
+    } else {
+      this.comboInfo.count++;
+      this.comboInfo.mergePositions.push({ x: mergePosition.x, y: mergePosition.y });
+    }
+
+    this.comboInfo.lastMergeTime = now;
+
+    if (this.comboInfo.count >= this.COMBO_THRESHOLD) {
+      this.triggerComboEffect();
+    }
+  }
+
+  private triggerComboEffect(): void {
+    const centerX =
+      this.comboInfo.mergePositions.reduce((sum, pos) => sum + pos.x, 0) /
+      this.comboInfo.mergePositions.length;
+    const centerY =
+      this.comboInfo.mergePositions.reduce((sum, pos) => sum + pos.y, 0) /
+      this.comboInfo.mergePositions.length;
+
+    this.renderer.triggerFireworks(centerX, centerY, this.comboInfo.count);
   }
 
   private updateScore(): void {
@@ -324,6 +359,7 @@ export class Game {
 
   private gameLoop = (): void => {
     this.render();
+    this.renderer.updateFireworks();
     this.animationFrameId = requestAnimationFrame(this.gameLoop);
   };
 

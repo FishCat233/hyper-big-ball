@@ -1,18 +1,18 @@
 {
   "fruits": [
-    { "emoji": "🍒", "radius": 15, "color": "#FF6B6B", "score": 2 },
-    { "emoji": "🍊", "radius": 22, "color": "#FFA500", "score": 4 },
-    { "emoji": "🍑", "radius": 30, "color": "#FFB6C1", "score": 8 },
-    { "emoji": "🍎", "radius": 38, "color": "#DC143C", "score": 16 },
-    { "emoji": "🍈", "radius": 48, "color": "#90EE90", "score": 32 },
-    { "emoji": "🍍", "radius": 60, "color": "#FFD700", "score": 64 },
-    { "emoji": "🍉", "radius": 75, "color": "#FF6347", "score": 128 }
+    { "emoji": "🍒", "radius": 16, "color": "#FF6B6B", "score": 2 },
+    { "emoji": "🍊", "radius": 24, "color": "#FFA500", "score": 4 },
+    { "emoji": "🍑", "radius": 34, "color": "#FFB6C1", "score": 8 },
+    { "emoji": "🍎", "radius": 46, "color": "#DC143C", "score": 16 },
+    { "emoji": "🍈", "radius": 60, "color": "#90EE90", "score": 32 },
+    { "emoji": "🍍", "radius": 78, "color": "#FFD700", "score": 64 },
+    { "emoji": "🍉", "radius": 100, "color": "#FF6347", "score": 128 }
   ],
   "gameSettings": {
     "previewFruitMaxLevel": 3,
-    "dropCooldown": 500,
+    "dropCooldown": 300,
     "gameOverStableFrames": 60,
-    "gravity": 1.2
+    "gravity": 1.5
   },
   "variantSettings": {
     "triggerProbability": 0.5,

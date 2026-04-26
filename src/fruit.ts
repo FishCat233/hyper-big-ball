@@ -78,7 +78,7 @@ export async function loadFruitsConfig(): Promise<FruitsConfig> {
     return configCache;
   }
 
-  const response = await fetch('/fruits.json');
+  const response = await fetch('./fruits.json');
   if (!response.ok) {
     throw new Error('Failed to load fruits config');
   }
