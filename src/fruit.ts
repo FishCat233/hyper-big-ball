@@ -52,8 +52,6 @@ export interface ImageVariant {
 
 export type FruitVariant = WeightVariant | ElasticityVariant | ColorVariant | null;
 
-export type { ImageVariant };
-
 export interface VariantSettings {
   triggerProbability: number;
   weight: {
@@ -144,7 +142,7 @@ export class Fruit {
     }
   }
 
-  private static generateWeightVariant(settings: VariantSettings): WeightVariant | null {
+  public static generateWeightVariant(settings: VariantSettings): WeightVariant | null {
     const rand = Math.random();
     let cumulative = 0;
 
@@ -160,7 +158,7 @@ export class Fruit {
     return null;
   }
 
-  private static generateElasticityVariant(settings: VariantSettings): ElasticityVariant | null {
+  public static generateElasticityVariant(settings: VariantSettings): ElasticityVariant | null {
     const rand = Math.random();
     let cumulative = 0;
 
@@ -176,7 +174,7 @@ export class Fruit {
     return null;
   }
 
-  private static generateColorVariant(settings: VariantSettings): ColorVariant | null {
+  public static generateColorVariant(settings: VariantSettings): ColorVariant | null {
     if (Math.random() > settings.color.probability) {
       return null;
     }

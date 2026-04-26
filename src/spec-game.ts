@@ -18,7 +18,7 @@ type FruitBody = Matter.Body & {
   isMerged?: boolean;
   stableTime?: number;
   variant?: FruitVariant;
-  imageVariant?: ImageVariant;
+  imageVariant?: ImageVariant | null;
   breathPhase?: number;
   gravityScale?: number;
 };
@@ -55,8 +55,8 @@ export class SpecGame {
   private fruits: FruitType[] = [];
   private currentVariant: FruitVariant = null;
   private nextVariant: FruitVariant = null;
-  private currentImageVariant: ImageVariant = null;
-  private nextImageVariant: ImageVariant = null;
+  private currentImageVariant: ImageVariant | null = null;
+  private nextImageVariant: ImageVariant | null = null;
   private animationFrameId: number = 0;
   private comboInfo: ComboInfo = { count: 0, lastMergeTime: 0, mergePositions: [] };
   private qqConfig: QQConfig | null = null;
@@ -277,7 +277,7 @@ export class SpecGame {
     }
   }
 
-  private generateImageVariant(): ImageVariant {
+  private generateImageVariant(): ImageVariant | null {
     // 演示模式：必出5个图像变体
     if (this.imageVariantCount < this.MAX_IMAGE_VARIANTS) {
       this.imageVariantCount++;
@@ -534,6 +534,7 @@ export class SpecGame {
     this.hasSpawnedMaxElasticity = false;
     this.hasSpawnedRainbow = false;
     this.imageVariantCount = 0;
+    this.comboInfo = { count: 0, lastMergeTime: 0, mergePositions: [] };
     this.updateScore();
 
     Composite.clear(this.engine.world, false);
@@ -550,9 +551,7 @@ export class SpecGame {
     this.gameOverElement.classList.add('hidden');
     Runner.run(this.runner, this.engine);
 
-    // 重置计时器
     this.gameStartTime = Date.now();
-    clearInterval(this.timerInterval);
     this.timerInterval = window.setInterval(() => this.updateTimer(), 1000);
   }
 

@@ -1,4 +1,4 @@
-import { Application, Graphics, Container, Text, Sprite, Texture } from 'pixi.js';
+import { Application, Graphics, Container, Text, Sprite, Texture, Assets } from 'pixi.js';
 import Matter from 'matter-js';
 import type { FruitType, FruitVariant, ElasticityVariant, ImageVariant } from './fruit';
 
@@ -31,7 +31,7 @@ interface FruitBody extends Matter.Body {
   isMerged?: boolean;
   stableTime?: number;
   variant?: FruitVariant;
-  imageVariant?: ImageVariant;
+  imageVariant?: ImageVariant | null;
   breathPhase?: number;
 }
 
@@ -177,10 +177,9 @@ export class SpecRenderer {
         this.fruitSprites.set(id, sprite);
         this.fruitContainer.addChild(sprite);
 
-        // 加载头像纹理
-        Texture.fromURL(imageVariant.avatarUrl)
+        Assets.load(imageVariant.avatarUrl)
           .then((texture) => {
-            sprite!.texture = texture;
+            sprite!.texture = texture as Texture;
             sprite!.anchor.set(0.5);
           })
           .catch(() => {
@@ -447,9 +446,9 @@ export class SpecRenderer {
       this.previewContainer.addChild(previewGraphic);
 
       // 异步加载头像
-      Texture.fromURL(imageVariant.avatarUrl)
+      Assets.load(imageVariant.avatarUrl)
         .then((texture) => {
-          const sprite = new Sprite(texture);
+          const sprite = new Sprite(texture as Texture);
           sprite.anchor.set(0.5);
           sprite.x = x;
           sprite.y = y;
