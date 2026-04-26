@@ -1,0 +1,79 @@
+{
+  "fruits": [
+    { "emoji": "🍒", "radius": 15, "color": "#FF6B6B", "score": 2 },
+    { "emoji": "🍊", "radius": 22, "color": "#FFA500", "score": 4 },
+    { "emoji": "🍑", "radius": 30, "color": "#FFB6C1", "score": 8 },
+    { "emoji": "🍎", "radius": 38, "color": "#DC143C", "score": 16 },
+    { "emoji": "🍈", "radius": 48, "color": "#90EE90", "score": 32 },
+    { "emoji": "🍍", "radius": 60, "color": "#FFD700", "score": 64 },
+    { "emoji": "🍉", "radius": 75, "color": "#FF6347", "score": 128 }
+  ],
+  "gameSettings": {
+    "previewFruitMaxLevel": 3,
+    "dropCooldown": 500,
+    "gameOverStableFrames": 60,
+    "gravity": 1.2
+  },
+  "variantSettings": {
+    "triggerProbability": 0.5,
+    "weight": {
+      "levels": [
+        {
+          "name": "light",
+          "densityMultiplier": 0.4,
+          "gravityMultiplier": 0.6,
+          "outlineWidth": 2,
+          "outlineColor": "#E0F7FF"
+        },
+        {
+          "name": "normal",
+          "densityMultiplier": 1.0,
+          "gravityMultiplier": 1.0,
+          "outlineWidth": 0,
+          "outlineColor": ""
+        },
+        {
+          "name": "heavy",
+          "densityMultiplier": 2.0,
+          "gravityMultiplier": 1.6,
+          "outlineWidth": 8,
+          "outlineColor": "#4A0000"
+        }
+      ],
+      "probabilities": [0.35, 0.3, 0.35]
+    },
+    "elasticity": {
+      "levels": [
+        {
+          "name": "low",
+          "restitution": 0.05,
+          "breathSpeed": 0.02,
+          "breathAmplitude": 0.03,
+          "glowOpacity": 0.4
+        },
+        {
+          "name": "normal",
+          "restitution": 0.3,
+          "breathSpeed": 0,
+          "breathAmplitude": 0,
+          "glowOpacity": 0
+        },
+        {
+          "name": "high",
+          "restitution": 0.8,
+          "breathSpeed": 0.15,
+          "breathAmplitude": 0.18,
+          "glowOpacity": 1.0
+        }
+      ],
+      "probabilities": [0.35, 0.3, 0.35]
+    },
+    "color": {
+      "variants": ["#FF1493", "#00CED1", "#9370DB", "#32CD32", "#FFD700", "#FF4500", "#1E90FF"],
+      "probability": 0.35,
+      "outlineWidth": 5,
+      "rainbowColors": ["#FF1493", "#FFD700", "#00CED1"],
+      "cycleDuration": 1500
+    }
+  }
+}
