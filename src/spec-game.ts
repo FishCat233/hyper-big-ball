@@ -309,7 +309,13 @@ export class SpecGame {
     this.nextFruitElement.style.border = 'none';
     this.nextFruitElement.style.boxShadow = 'none';
 
-    if (variant?.type === 'weight') {
+    // 图像变体：彩虹色边框
+    if (imageVariant) {
+      this.nextFruitElement.style.border = '4px solid transparent';
+      this.nextFruitElement.style.backgroundImage = `linear-gradient(${color}, ${color}), linear-gradient(45deg, #FF1493, #FFD700, #00CED1, #FF1493)`;
+      this.nextFruitElement.style.backgroundOrigin = 'border-box';
+      this.nextFruitElement.style.backgroundClip = 'content-box, border-box';
+    } else if (variant?.type === 'weight') {
       const weightVariant = variant;
       if (weightVariant.level.outlineWidth > 0) {
         this.nextFruitElement.style.border = `${weightVariant.level.outlineWidth}px solid ${weightVariant.level.outlineColor}`;

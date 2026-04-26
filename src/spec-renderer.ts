@@ -327,9 +327,20 @@ export class SpecRenderer {
   }
 
   private drawFruitVariant(graphic: Graphics, fruit: RenderableFruit, radius: number): void {
-    const { variant } = fruit;
+    const { variant, imageVariant } = fruit;
 
     graphic.clear();
+
+    // 图像变体：彩虹色描边
+    if (imageVariant) {
+      const rainbowColor = this.getRainbowColor();
+      graphic.circle(0, 0, radius);
+      graphic.stroke({
+        color: this.parseColor(rainbowColor),
+        width: 5,
+      });
+      return;
+    }
 
     if (!variant) return;
 
@@ -425,8 +436,14 @@ export class SpecRenderer {
     // 如果有图像变体，显示头像
     if (imageVariant) {
       const previewGraphic = new Graphics();
+      // 图像变体：彩虹色描边
+      const rainbowColor = this.getRainbowColor();
       previewGraphic.circle(x, y, fruitType.radius);
       previewGraphic.fill({ color: this.parseColor(color), alpha: 0.5 });
+      previewGraphic.stroke({
+        color: this.parseColor(rainbowColor),
+        width: 5,
+      });
       this.previewContainer.addChild(previewGraphic);
 
       // 异步加载头像
