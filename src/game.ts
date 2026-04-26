@@ -21,6 +21,12 @@ type FruitBody = Matter.Body & {
   gravityScale?: number;
 };
 
+interface ComboInfo {
+  count: number;
+  lastMergeTime: number;
+  mergePositions: Matter.Vector[];
+}
+
 export class Game {
   private engine: Matter.Engine;
   private runner: Matter.Runner;
@@ -284,6 +290,9 @@ export class Game {
     this.score += newFruit.score;
     this.updateScore();
 
+    // 播放合成特效（小型烟花在合成位置）
+    this.renderer.triggerMergeFirework(newPos.x, newPos.y);
+
     // 更新连击信息
     this.updateCombo(newPos);
   }
@@ -307,14 +316,8 @@ export class Game {
   }
 
   private triggerComboEffect(): void {
-    const centerX =
-      this.comboInfo.mergePositions.reduce((sum, pos) => sum + pos.x, 0) /
-      this.comboInfo.mergePositions.length;
-    const centerY =
-      this.comboInfo.mergePositions.reduce((sum, pos) => sum + pos.y, 0) /
-      this.comboInfo.mergePositions.length;
-
-    this.renderer.triggerFireworks(centerX, centerY, this.comboInfo.count);
+    // 播放连击特效（大型烟花在页面周围随机位置）
+    this.renderer.triggerComboFireworks(this.comboInfo.count);
   }
 
   private updateScore(): void {
