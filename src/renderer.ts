@@ -23,6 +23,7 @@ export interface RenderableFruit {
   fruitType: FruitType;
   variant: FruitVariant;
   breathPhase: number;
+  scaleRatio?: number;
 }
 
 interface FruitBody extends Matter.Body {
@@ -129,6 +130,7 @@ export class PixiRenderer {
   private updateOrCreateFruit(fruit: RenderableFruit): void {
     const { body, fruitType, variant } = fruit;
     const id = body.id;
+    const scaleRatio = fruit.scaleRatio || 1;
 
     let graphic = this.fruitGraphics.get(id);
     let text = this.fruitTexts.get(id);
@@ -147,12 +149,13 @@ export class PixiRenderer {
       this.fruitContainer.addChild(graphic);
     }
 
+    const scaledRadius = fruitType.radius * scaleRatio;
     if (!text) {
       text = new Text({
         text: fruitType.emoji,
         style: {
           fontFamily: 'Arial',
-          fontSize: fruitType.radius * 1.2,
+          fontSize: scaledRadius * 1.2,
           fill: 0x000000,
           align: 'center',
         },
@@ -160,10 +163,13 @@ export class PixiRenderer {
       text.anchor.set(0.5);
       this.fruitTexts.set(id, text);
       this.fruitContainer.addChild(text);
+    } else {
+      // 更新字体大小以适应缩放
+      text.style.fontSize = scaledRadius * 1.2;
     }
 
     // 绘制水果
-    this.drawFruit(graphic, fruit);
+    this.drawFruit(graphic, fruit, scaleRatio);
 
     // 更新位置
     graphic.x = body.position.x;
@@ -173,7 +179,7 @@ export class PixiRenderer {
     text.rotation = body.angle;
   }
 
-  private drawFruit(graphic: Graphics, fruit: RenderableFruit): void {
+  private drawFruit(graphic: Graphics, fruit: RenderableFruit, scaleRatio: number = 1): void {
     const { fruitType, variant } = fruit;
 
     graphic.clear();
@@ -181,14 +187,14 @@ export class PixiRenderer {
     // 获取有效颜色
     const color = this.getEffectiveColor(fruitType.color, variant);
 
-    // 计算半径（考虑呼吸效果）
-    let radius = fruitType.radius;
+    // 计算半径（考虑缩放和呼吸效果）
+    let radius = fruitType.radius * scaleRatio;
     let breathValue = 0;
     if (variant?.type === 'elasticity') {
       const elasticVariant = variant as ElasticityVariant;
       breathValue = Math.sin(fruit.breathPhase);
       const breathOffset = breathValue * elasticVariant.level.breathAmplitude;
-      radius = fruitType.radius * (1 + breathOffset);
+      radius = fruitType.radius * scaleRatio * (1 + breathOffset);
     }
 
     // 根据变体类型绘制
@@ -297,12 +303,14 @@ export class PixiRenderer {
     y: number,
     fruitType: FruitType,
     variant: FruitVariant,
+    scaleRatio: number,
     showGuideline: boolean,
     gameHeight: number
   ): void {
     this.previewContainer.removeChildren();
 
     const color = this.getEffectiveColor(fruitType.color, variant);
+    const scaledRadius = fruitType.radius * scaleRatio;
 
     // 绘制预览水果
     const previewGraphic = new Graphics();
@@ -311,7 +319,7 @@ export class PixiRenderer {
     if (variant?.type === 'weight') {
       const weightVariant = variant;
       // 绘制水果主体
-      previewGraphic.circle(x, y, fruitType.radius);
+      previewGraphic.circle(x, y, scaledRadius);
       previewGraphic.fill({ color: this.parseColor(color), alpha: 0.5 });
       // 绘制重量变体描边 - 使用与水果本色相近的颜色
       if (weightVariant.level.outlineWidth > 0) {
@@ -329,14 +337,14 @@ export class PixiRenderer {
       const outlineColor = this.adjustBrightness(color, -30);
       // 计算呼吸动画参数（预览也播放动画）
       const breathValue = Math.sin(Date.now() / 200);
-      const glowRadius = fruitType.radius * (1.2 + breathValue * 0.1);
+      const glowRadius = scaledRadius * (1.2 + breathValue * 0.1);
       const outlineWidth = 2 + (breathValue + 1) * 1.5;
       const glowOpacity = 0.15 + (breathValue + 1) * 0.1;
       // 绘制动态光环
       previewGraphic.circle(x, y, glowRadius);
       previewGraphic.fill({ color: this.parseColor(outlineColor), alpha: glowOpacity });
       // 绘制水果主体
-      previewGraphic.circle(x, y, fruitType.radius);
+      previewGraphic.circle(x, y, scaledRadius);
       previewGraphic.fill({ color: this.parseColor(color), alpha: 0.5 });
       previewGraphic.stroke({
         color: this.parseColor(outlineColor),
@@ -344,12 +352,12 @@ export class PixiRenderer {
       });
     } else if (variant?.type === 'color') {
       // 绘制水果主体
-      previewGraphic.circle(x, y, fruitType.radius);
+      previewGraphic.circle(x, y, scaledRadius);
       // 根据颜色变体类型绘制
       if (variant.variantType === 'rainbow') {
         // 彩虹变体：球体显示动态彩虹色
         const rainbowColor = this.getRainbowColor();
-        previewGraphic.circle(x, y, fruitType.radius);
+        previewGraphic.circle(x, y, scaledRadius);
         previewGraphic.fill({ color: this.parseColor(rainbowColor), alpha: 0.5 });
         previewGraphic.stroke({
           color: this.parseColor(rainbowColor),
@@ -357,7 +365,7 @@ export class PixiRenderer {
         });
       } else if (variant.variantType === 'black') {
         // 黑色变体：球体填充黑色，深灰色描边
-        previewGraphic.circle(x, y, fruitType.radius);
+        previewGraphic.circle(x, y, scaledRadius);
         previewGraphic.fill({ color: this.parseColor(color), alpha: 0.5 });
         previewGraphic.stroke({
           color: 0x333333,
@@ -365,7 +373,7 @@ export class PixiRenderer {
         });
       } else if (variant.variantType === 'white') {
         // 白色变体：球体填充白色，浅灰色描边
-        previewGraphic.circle(x, y, fruitType.radius);
+        previewGraphic.circle(x, y, scaledRadius);
         previewGraphic.fill({ color: this.parseColor(color), alpha: 0.5 });
         previewGraphic.stroke({
           color: 0xcccccc,
@@ -373,7 +381,7 @@ export class PixiRenderer {
         });
       }
     } else {
-      previewGraphic.circle(x, y, fruitType.radius);
+      previewGraphic.circle(x, y, scaledRadius);
       previewGraphic.fill({ color: this.parseColor(color), alpha: 0.5 });
       previewGraphic.stroke({
         color: this.parseColor(color),
@@ -388,7 +396,7 @@ export class PixiRenderer {
       text: fruitType.emoji,
       style: {
         fontFamily: 'Arial',
-        fontSize: fruitType.radius,
+        fontSize: scaledRadius,
         fill: 0x000000,
         align: 'center',
       },
@@ -401,7 +409,7 @@ export class PixiRenderer {
     // 绘制引导线
     if (showGuideline) {
       const guideline = new Graphics();
-      guideline.moveTo(x, y + fruitType.radius + 5);
+      guideline.moveTo(x, y + scaledRadius + 5);
       guideline.lineTo(x, gameHeight);
       guideline.stroke({
         color: 0xffffff,
@@ -538,6 +546,12 @@ export class PixiRenderer {
 
       return firework.particles.length > 0;
     });
+  }
+
+  public resize(width: number, height: number): void {
+    this.width = width;
+    this.height = height;
+    this.app.renderer.resize(width, height);
   }
 
   public destroy(): void {

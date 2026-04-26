@@ -51,13 +51,17 @@ export class Game {
   private animationFrameId: number = 0;
   private comboInfo: ComboInfo = { count: 0, lastMergeTime: 0, mergePositions: [] };
 
-  private readonly GAME_WIDTH = 400;
-  private readonly GAME_HEIGHT = 600;
+  private readonly BASE_GAME_WIDTH = 400;
+  private readonly BASE_GAME_HEIGHT = 600;
   private readonly WALL_THICKNESS = 20;
   private readonly TOP_MARGIN = 100;
   private readonly FRUIT_SPAWN_Y = 80;
   private readonly COMBO_WINDOW = 700;
   private readonly COMBO_THRESHOLD = 3;
+
+  private gameWidth: number = this.BASE_GAME_WIDTH;
+  private gameHeight: number = this.BASE_GAME_HEIGHT;
+  private scaleRatio: number = 1;
 
   constructor() {
     this.canvas = document.getElementById('game-canvas') as HTMLCanvasElement;
@@ -67,12 +71,36 @@ export class Game {
     this.finalScoreElement = document.getElementById('final-score') as HTMLElement;
     this.restartBtn = document.getElementById('restart-btn') as HTMLElement;
 
-    this.canvas.width = this.GAME_WIDTH;
-    this.canvas.height = this.GAME_HEIGHT;
+    this.calculateDimensions();
+
+    this.canvas.width = this.gameWidth;
+    this.canvas.height = this.gameHeight;
 
     this.engine = Engine.create();
     this.runner = Runner.create();
-    this.renderer = new PixiRenderer(this.canvas, this.GAME_WIDTH, this.GAME_HEIGHT);
+    this.renderer = new PixiRenderer(this.canvas, this.gameWidth, this.gameHeight);
+  }
+
+  private calculateDimensions(): void {
+    const screenWidth = window.innerWidth;
+    const isMobile = screenWidth < 600;
+
+    if (isMobile) {
+      // 移动端：宽度为屏幕宽度的 90%，最大不超过 400px
+      this.gameWidth = Math.min(screenWidth * 0.9, this.BASE_GAME_WIDTH);
+      // 保持宽高比
+      this.scaleRatio = this.gameWidth / this.BASE_GAME_WIDTH;
+      this.gameHeight = this.BASE_GAME_HEIGHT * this.scaleRatio;
+    } else {
+      // 桌面端：固定尺寸
+      this.gameWidth = this.BASE_GAME_WIDTH;
+      this.gameHeight = this.BASE_GAME_HEIGHT;
+      this.scaleRatio = 1;
+    }
+  }
+
+  private getScaledValue(value: number): number {
+    return value * this.scaleRatio;
   }
 
   public async init(): Promise<void> {
@@ -95,26 +123,26 @@ export class Game {
 
   private setupWorld(): void {
     const ground = Bodies.rectangle(
-      this.GAME_WIDTH / 2,
-      this.GAME_HEIGHT + this.WALL_THICKNESS / 2 - 5,
-      this.GAME_WIDTH,
+      this.gameWidth / 2,
+      this.gameHeight + this.WALL_THICKNESS / 2 - 5,
+      this.gameWidth,
       this.WALL_THICKNESS,
       { isStatic: true }
     );
 
     const leftWall = Bodies.rectangle(
       -this.WALL_THICKNESS / 2 + 5,
-      this.GAME_HEIGHT / 2,
+      this.gameHeight / 2,
       this.WALL_THICKNESS,
-      this.GAME_HEIGHT,
+      this.gameHeight,
       { isStatic: true }
     );
 
     const rightWall = Bodies.rectangle(
-      this.GAME_WIDTH + this.WALL_THICKNESS / 2 - 5,
-      this.GAME_HEIGHT / 2,
+      this.gameWidth + this.WALL_THICKNESS / 2 - 5,
+      this.gameHeight / 2,
       this.WALL_THICKNESS,
-      this.GAME_HEIGHT,
+      this.gameHeight,
       { isStatic: true }
     );
 
@@ -122,27 +150,79 @@ export class Game {
   }
 
   private setupEvents(): void {
+    // 鼠标事件
     this.canvas.addEventListener('mousemove', this.handleMouseMove.bind(this));
     this.canvas.addEventListener('click', this.handleClick.bind(this));
+
+    // 触摸事件
+    this.canvas.addEventListener('touchstart', this.handleTouchStart.bind(this), {
+      passive: false,
+    });
+    this.canvas.addEventListener('touchmove', this.handleTouchMove.bind(this), { passive: false });
+    this.canvas.addEventListener('touchend', this.handleTouchEnd.bind(this), { passive: false });
+
+    // 阻止画布上的默认触摸行为（防止滚动和缩放）
+    this.canvas.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
+
     this.restartBtn.addEventListener('click', this.restart.bind(this));
 
     Events.on(this.engine, 'collisionStart', this.handleCollision.bind(this));
     Events.on(this.engine, 'beforeUpdate', this.checkGameOver.bind(this));
+
+    // 监听窗口大小变化
+    window.addEventListener('resize', this.handleResize.bind(this));
+  }
+
+  private handleResize(): void {
+    // 窗口大小变化时重新计算尺寸（仅在非游戏进行中时）
+    if (this.isGameOver) {
+      this.calculateDimensions();
+      this.canvas.width = this.gameWidth;
+      this.canvas.height = this.gameHeight;
+      this.renderer.resize(this.gameWidth, this.gameHeight);
+    }
+  }
+
+  private getCanvasCoordinates(clientX: number, clientY: number): { x: number; y: number } {
+    const rect = this.canvas.getBoundingClientRect();
+    const scaleX = this.canvas.width / rect.width;
+    const scaleY = this.canvas.height / rect.height;
+    return {
+      x: (clientX - rect.left) * scaleX,
+      y: (clientY - rect.top) * scaleY,
+    };
   }
 
   private handleMouseMove(e: MouseEvent): void {
     if (this.isGameOver || !this.canDrop || !this.config) return;
-    const rect = this.canvas.getBoundingClientRect();
+    const coords = this.getCanvasCoordinates(e.clientX, e.clientY);
     const currentFruit = this.fruits[this.currentFruitLevel];
-    this.mouseX = Math.max(
-      currentFruit.radius,
-      Math.min(this.GAME_WIDTH - currentFruit.radius, e.clientX - rect.left)
-    );
+    const scaledRadius = currentFruit.radius * this.scaleRatio;
+    this.mouseX = Math.max(scaledRadius, Math.min(this.gameWidth - scaledRadius, coords.x));
   }
 
   private handleClick(): void {
     if (this.isGameOver || !this.canDrop) return;
     this.dropFruit();
+  }
+
+  private handleTouchStart(e: TouchEvent): void {
+    e.preventDefault();
+    if (this.isGameOver || !this.canDrop || !this.config) return;
+    const touch = e.touches[0];
+    this.handleMouseMove(touch as unknown as MouseEvent);
+  }
+
+  private handleTouchMove(e: TouchEvent): void {
+    e.preventDefault();
+    if (this.isGameOver || !this.canDrop || !this.config) return;
+    const touch = e.touches[0];
+    this.handleMouseMove(touch as unknown as MouseEvent);
+  }
+
+  private handleTouchEnd(e: TouchEvent): void {
+    e.preventDefault();
+    this.handleClick();
   }
 
   private dropFruit(): void {
@@ -157,7 +237,10 @@ export class Game {
     const density = Fruit.getEffectiveDensity(0.001, variant);
     const gravity = Fruit.getEffectiveGravity(this.engine.gravity.y, variant);
 
-    const body = Bodies.circle(this.mouseX, this.FRUIT_SPAWN_Y, fruit.radius, {
+    const scaledSpawnY = this.getScaledValue(this.FRUIT_SPAWN_Y);
+    const scaledRadius = fruit.radius * this.scaleRatio;
+
+    const body = Bodies.circle(this.mouseX, scaledSpawnY, scaledRadius, {
       restitution: restitution,
       friction: 0.1,
       density: density,
@@ -270,7 +353,8 @@ export class Game {
     const density = Fruit.getEffectiveDensity(0.001, newVariant);
     const gravity = Fruit.getEffectiveGravity(this.engine.gravity.y, newVariant);
 
-    const newBody = Bodies.circle(newPos.x, newPos.y, newFruit.radius, {
+    const scaledNewRadius = newFruit.radius * this.scaleRatio;
+    const newBody = Bodies.circle(newPos.x, newPos.y, scaledNewRadius, {
       restitution: restitution,
       friction: 0.1,
       density: density,
@@ -338,6 +422,7 @@ export class Game {
           fruitType: this.fruits[fruitBody.fruitLevel],
           variant: fruitBody.variant || null,
           breathPhase: fruitBody.breathPhase || 0,
+          scaleRatio: this.scaleRatio,
         });
       }
     }
@@ -346,15 +431,18 @@ export class Game {
 
     if (!this.isGameOver && this.canDrop) {
       const currentFruit = this.fruits[this.currentFruitLevel];
+      const scaledSpawnY = this.getScaledValue(this.FRUIT_SPAWN_Y);
+      const scaledTopMargin = this.getScaledValue(this.TOP_MARGIN);
       this.renderer.drawPreview(
         this.mouseX,
-        this.FRUIT_SPAWN_Y,
+        scaledSpawnY,
         currentFruit,
         this.currentVariant,
+        this.scaleRatio,
         true,
-        this.GAME_HEIGHT
+        this.gameHeight
       );
-      this.renderer.drawGameOverLine(this.TOP_MARGIN, this.GAME_WIDTH);
+      this.renderer.drawGameOverLine(scaledTopMargin, this.gameWidth);
     } else {
       this.renderer.clearPreview();
     }
@@ -379,7 +467,7 @@ export class Game {
         !fruitBody.isStatic &&
         body.velocity.y < 0.1 &&
         body.velocity.y > -0.1 &&
-        body.position.y < this.TOP_MARGIN
+        body.position.y < this.getScaledValue(this.TOP_MARGIN)
       ) {
         let stableTime = fruitBody.stableTime || 0;
         stableTime++;

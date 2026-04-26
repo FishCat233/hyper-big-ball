@@ -164,12 +164,61 @@ body {
 }
 
 @media (max-width: 600px) {
-  .preview-area {
-    position: static;
-    margin-top: 10px;
+  body {
+    padding: 10px;
+    align-items: flex-start;
   }
 
   .game-container {
     padding: 10px;
+    width: 100%;
+    max-width: 400px;
+  }
+
+  .score-board {
+    padding: 8px 20px;
+    font-size: 16px;
+  }
+
+  #game-canvas {
+    width: 100%;
+    height: auto;
+    max-width: 400px;
+  }
+
+  .preview-area {
+    position: static;
+    margin-top: 10px;
+    flex-direction: row;
+    padding: 10px 20px;
+    gap: 15px;
+  }
+
+  .preview-label {
+    font-size: 14px;
+  }
+
+  .preview-fruit {
+    width: 50px;
+    height: 50px;
+    font-size: 32px;
+  }
+
+  .game-over-content {
+    padding: 30px 40px;
+    margin: 0 20px;
+  }
+
+  .game-over-content h2 {
+    font-size: 24px;
+  }
+
+  .game-over-content p {
+    font-size: 16px;
+  }
+
+  #restart-btn {
+    padding: 12px 30px;
+    font-size: 16px;
   }
 }
