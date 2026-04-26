@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>合成大西瓜</title>
+  </head>
+  <body>
+    <div id="app">
+      <div class="game-container">
+        <div class="score-board">得分: <span id="score">0</span></div>
+        <canvas id="game-canvas"></canvas>
+        <div class="preview-area">
+          <div class="preview-label">下一个</div>
+          <div id="next-fruit" class="preview-fruit"></div>
+        </div>
+        <div id="game-over" class="game-over hidden">
+          <div class="game-over-content">
+            <h2>游戏结束</h2>
+            <p>最终得分: <span id="final-score">0</span></p>
+            <button id="restart-btn">重新开始</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
